@@ -1,0 +1,6 @@
+{
+  "uuid": "uiu-exam-indicator@local",
+  "name": "UIU Exam Indicator",
+  "description": "Shows the next UIU exam beside the GNOME clock and opens the UIU Exam Widget when clicked.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"]
+}

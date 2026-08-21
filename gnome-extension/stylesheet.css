@@ -1,0 +1,21 @@
+.uiu-exam-panel-box {
+    spacing: 6px;
+    padding-left: 4px;
+    padding-right: 6px;
+}
+
+.uiu-exam-panel-icon {
+    icon-size: 14px;
+}
+
+.uiu-exam-panel-label {
+    font-weight: 600;
+}
+
+.uiu-exam-normal { color: #e5e7eb; }
+.uiu-exam-soon { color: #fbbf24; }
+.uiu-exam-urgent { color: #fb923c; }
+.uiu-exam-critical { color: #f87171; }
+.uiu-exam-live { color: #ff4d5f; }
+.uiu-exam-good { color: #86efac; }
+.uiu-exam-empty { color: #94a3b8; }
