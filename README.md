@@ -2,6 +2,9 @@
 
 This version adds a real GNOME Shell top-bar extension in addition to the main PySide6 GUI.
 
+![Sample Screenshot](Top_bar.png)
+
+
 ## Top-bar behavior
 
 The indicator is installed in the GNOME **center box at position 0**, which places it immediately to the **left of the center clock** on the standard Ubuntu panel.
