@@ -1,3 +1,4 @@
 PySide6>=6.8
 playwright>=1.50
 beautifulsoup4>=4.12
+pyobjc-framework-Cocoa>=10.1; sys_platform == "darwin"

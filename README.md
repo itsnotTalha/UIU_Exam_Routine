@@ -1,62 +1,70 @@
-# UIU Exam Widget — MVP 2.0
+# UIU Exam Widget — macOS v1.0
 
-This version adds a real GNOME Shell top-bar extension in addition to the main PySide6 GUI.
+Native macOS edition of the UIU ExamCon routine app.
 
-![Sample Screenshot](Top_bar.png)
+## What it does
 
+- Logs into UIU ExamCon using Student or Faculty mode.
+- Resolves a student's exact room from the published ID ranges.
+- Saves the routine locally but never stores the UCAM password.
+- Restores the routine after restart until **Clear Saved Routine** is pressed.
+- Shows the full PySide6 routine window.
+- Adds a native AppKit item to the macOS menu bar.
+- Menu bar shows only the current/next exam:
+  - `CSE 425 · 1d 22h · R307`
+  - `CSE 425 · LIVE 1h 18m · R307`
+  - `✓ You're good now` when all saved exams are finished.
+- Clicking the menu-bar item opens or raises the full GUI.
 
-## Top-bar behavior
+## Install
 
-The indicator is installed in the GNOME **center box at position 0**, which places it immediately to the **left of the center clock** on the standard Ubuntu panel.
+Requirements: macOS 12+ and Python 3.
 
-It shows only one useful status:
-
-- Upcoming: `CSE 425 · 1d 22h · R307`
-- Live exam: `CSE 425 · LIVE 1h 18m · R307`
-- All exams finished: `✓ You're good now`
-- No cached routine: `UIU · Fetch routine`
-
-Clicking the indicator opens the full UIU Exam Widget. If the GUI is already running, the existing window is raised instead of opening a duplicate.
-
-## Install the application dependencies
-
-```bash
-chmod +x install.sh run.sh
-./install.sh
+```zsh
+chmod +x install-macos.sh uninstall-macos.sh
+./install-macos.sh
 ```
 
-## Install the GNOME top-bar extension
+The installer creates:
 
-```bash
-chmod +x install-topbar.sh
-./install-topbar.sh
-```
+- `~/Applications/UIU Exam Widget.app`
+- a login menu-bar helper via `~/Library/LaunchAgents/com.uiu.examwidget.menubar.plist`
+- runtime files under `~/Library/Application Support/UIU Exam Widget/runtime`
 
-The installer detects the local GNOME Shell major version and writes matching extension metadata.
-
-If GNOME has not discovered the new extension yet, log out and back in once, then run:
-
-```bash
-gnome-extensions enable uiu-exam-indicator@local
-```
-
-## Data flow
-
-The GUI continues to own ExamCon login/fetching. Passwords are never stored.
-
-After a successful fetch it writes:
+Saved routine/cache files live under:
 
 ```text
-~/.local/share/uiu-exam-widget/routine-cache.json
-~/.local/share/uiu-exam-widget/panel-cache.json
+~/Library/Application Support/UIU Exam Widget/
 ```
 
-`panel-cache.json` contains normalized course/start/end/room information only. The GNOME extension reads it locally and recalculates the next exam every 30 seconds. It also watches the cache directory so a refresh in the GUI appears in the panel quickly.
+## Development run
 
-Existing cached routines from MVP 1.x are migrated automatically when the GUI opens, so another ExamCon login is normally not required.
-
-## Remove only the top-bar extension
-
-```bash
-./uninstall-topbar.sh
+```zsh
+chmod +x setup-macos-dev.sh run-macos.sh run-menubar-macos.sh
+./setup-macos-dev.sh
+./run-macos.sh
 ```
+
+In another Terminal window:
+
+```zsh
+./run-menubar-macos.sh
+```
+
+## Uninstall
+
+Keep the saved routine/cache:
+
+```zsh
+./uninstall-macos.sh
+```
+
+Remove the app and all saved data:
+
+```zsh
+./uninstall-macos.sh --delete-data
+```
+
+## Notes
+
+The menu-bar helper uses native AppKit through PyObjC, not a GNOME extension. macOS places custom status items on the right side of the menu bar alongside other status icons.

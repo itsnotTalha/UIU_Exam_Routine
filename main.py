@@ -33,7 +33,7 @@ from storage import save_routine, load_routine, clear_routine
 APP_QSS = """
 QWidget {
     color: #eef2f7;
-    font-family: Ubuntu, Inter, Sans-Serif;
+    font-family: "SF Pro Text", "Helvetica Neue", Arial, Sans-Serif;
     font-size: 14px;
 }
 QWidget#appWindow, QWidget#resultsWidget, QScrollArea {
@@ -1193,6 +1193,17 @@ class MainWindow(QWidget):
 INSTANCE_SERVER_NAME = "uiu-exam-widget-single-instance"
 
 
+def _activate_macos_app() -> None:
+    """Ask macOS to bring the GUI to the foreground when opened from the menu bar."""
+    if sys.platform != "darwin":
+        return
+    try:
+        from AppKit import NSApplication
+        NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
+    except Exception:
+        pass
+
+
 def _notify_existing_instance() -> bool:
     """Return True if another instance exists and was asked to show itself."""
     socket = QLocalSocket()
@@ -1234,9 +1245,11 @@ def main():
         window.show()
         window.raise_()
         window.activateWindow()
+        _activate_macos_app()
 
     instance_server.newConnection.connect(raise_window)
     window.show()
+    _activate_macos_app()
     sys.exit(app.exec())
 
 
