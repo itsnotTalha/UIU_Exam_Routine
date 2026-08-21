@@ -2,26 +2,21 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 from models import Exam
-
-
-APP_DIR = Path.home() / ".local" / "share" / "uiu-exam-widget"
-CACHE_FILE = APP_DIR / "routine-cache.json"
-PANEL_CACHE_FILE = APP_DIR / "panel-cache.json"
+from paths import APP_DIR, CACHE_FILE, PANEL_CACHE_FILE
 
 
 def _iso_local(dt):
     if dt is None:
         return None
-    # Include the local UTC offset so the GNOME extension can compare times safely.
+    # Include the local UTC offset so the menu-bar helper can compare times safely.
     return dt.astimezone().isoformat(timespec="seconds")
 
 
 def write_panel_cache(mode: str, username: str, exams: List[Exam]) -> None:
-    """Write a small, normalized cache consumed by the GNOME Shell extension."""
+    """Write a small, normalized cache consumed by the menu-bar helper."""
     APP_DIR.mkdir(parents=True, exist_ok=True)
     panel_exams = []
 
@@ -81,7 +76,7 @@ def load_routine() -> Optional[Tuple[str, str, str, List[Exam]]]:
         username = str(data.get("username", ""))
         fetched_at = str(data.get("fetched_at", ""))
 
-        # Automatically migrate older cached routines so the panel extension works
+        # Automatically migrate older cached routines so the menu-bar helper works
         # without forcing another ExamCon login.
         try:
             write_panel_cache(mode, username, exams)

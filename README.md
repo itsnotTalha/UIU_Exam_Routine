@@ -1,62 +1,107 @@
-# UIU Exam Widget — MVP 2.0
+# UIU Exam Widget — Windows v1.0
 
-This version adds a real GNOME Shell top-bar extension in addition to the main PySide6 GUI.
+Windows edition of the UIU ExamCon routine app.
 
-![Sample Screenshot](Top_bar.png)
+## What it does
 
+- Student / Faculty ExamCon login.
+- Finds only the student's assigned room from ExamCon room ranges.
+- Saves the fetched routine locally until **Clear Saved Routine** is pressed.
+- Never saves the UCAM password.
+- Shows live current-time vs exam start/end countdowns.
+- Keeps the modern dark routine UI and movable/resizable desktop exam tiles.
+- Adds a native Windows **system-tray indicator** beside the clock area.
+- Clicking the tray icon opens or raises the full GUI.
+- Tray icon color becomes warmer as the next exam gets closer.
+- When all saved exams are over, the tray tooltip/menu says **You're good now**.
+- Starts automatically with Windows after installation.
 
-## Top-bar behavior
+## Important Windows tray behavior
 
-The indicator is installed in the GNOME **center box at position 0**, which places it immediately to the **left of the center clock** on the standard Ubuntu panel.
+Standard Windows 10/11 system-tray icons cannot permanently display a long text string beside the clock the way a GNOME panel extension can. This version therefore uses:
 
-It shows only one useful status:
+- a colored UIU tray icon,
+- a detailed hover tooltip,
+- a context menu showing the next exam / room / time-left,
+- click-to-open full GUI.
 
-- Upcoming: `CSE 425 · 1d 22h · R307`
-- Live exam: `CSE 425 · LIVE 1h 18m · R307`
-- All exams finished: `✓ You're good now`
-- No cached routine: `UIU · Fetch routine`
+Urgency colors:
 
-Clicking the indicator opens the full UIU Exam Widget. If the GUI is already running, the existing window is raised instead of opening a duplicate.
+- Blue: more than 3 days away
+- Amber: 1–3 days
+- Orange: under 24 hours
+- Red: under 6 hours
+- Bright red: under 1 hour or exam in progress
+- Green check: all saved exams are over
 
-## Install the application dependencies
+## Install
 
-```bash
-chmod +x install.sh run.sh
-./install.sh
-```
+Requirements: Windows 10/11 and Python 3.10+.
 
-## Install the GNOME top-bar extension
-
-```bash
-chmod +x install-topbar.sh
-./install-topbar.sh
-```
-
-The installer detects the local GNOME Shell major version and writes matching extension metadata.
-
-If GNOME has not discovered the new extension yet, log out and back in once, then run:
-
-```bash
-gnome-extensions enable uiu-exam-indicator@local
-```
-
-## Data flow
-
-The GUI continues to own ExamCon login/fetching. Passwords are never stored.
-
-After a successful fetch it writes:
+1. Extract the ZIP to a permanent folder. Do not delete/move the folder after installation because the Windows shortcuts point to it.
+2. Double-click:
 
 ```text
-~/.local/share/uiu-exam-widget/routine-cache.json
-~/.local/share/uiu-exam-widget/panel-cache.json
+install-windows.bat
 ```
 
-`panel-cache.json` contains normalized course/start/end/room information only. The GNOME extension reads it locally and recalculates the next exam every 30 seconds. It also watches the cache directory so a refresh in the GUI appears in the panel quickly.
+The installer will:
 
-Existing cached routines from MVP 1.x are migrated automatically when the GUI opens, so another ExamCon login is normally not required.
+- create `.venv`,
+- install PySide6 / Playwright / BeautifulSoup,
+- install Playwright Chromium,
+- add a Startup shortcut for tray mode,
+- add Start Menu and Desktop shortcuts,
+- start the tray indicator.
 
-## Remove only the top-bar extension
+If Python is missing, install Python 3 from python.org and enable **Add Python to PATH**.
 
-```bash
-./uninstall-topbar.sh
+## Manual commands
+
+Open/raise full GUI:
+
+```text
+run-windows.bat
 ```
+
+Start tray helper:
+
+```text
+start-tray-windows.bat
+```
+
+Debug with a visible console:
+
+```text
+run-windows-debug.bat
+```
+
+## Saved data
+
+Routine data is stored in:
+
+```text
+%LOCALAPPDATA%\UIU Exam Widget\
+```
+
+This includes the routine cache and normalized tray cache. The UCAM password is not stored.
+
+## Uninstall startup integration
+
+Double-click:
+
+```text
+uninstall-windows.bat
+```
+
+This removes the Startup / Start Menu / Desktop shortcuts but keeps cached routine data.
+
+To remove data too:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\uninstall-windows.ps1 -RemoveData
+```
+
+## Notes
+
+Windows may place the tray icon under the `^` hidden-icons menu initially. You can drag it onto the visible taskbar tray area from Windows tray settings.

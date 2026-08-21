@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 from models import Exam
+from paths import APP_DIR
 
 
 EXAMCON_URL = "https://examcon.uiu.ac.bd/"
@@ -225,7 +226,7 @@ def fetch_exam_routine(username: str, password: str, mode: str = "student") -> L
     if not username or not password:
         raise ExamConError("Username/Student ID and password are required.")
 
-    debug_path = Path.home() / ".local" / "share" / "uiu-exam-widget"
+    debug_path = APP_DIR
     debug_path.mkdir(parents=True, exist_ok=True)
 
     with sync_playwright() as p:
@@ -310,5 +311,5 @@ def fetch_exam_routine(username: str, password: str, mode: str = "student") -> L
 
         raise ExamConError(
             f"The {mode} login/result page changed, but no exam routine could be identified yet. "
-            f"A redacted debug copy was saved to ~/.local/share/uiu-exam-widget/last-result-{mode}.html"
+            f"A redacted debug copy was saved to {debug_path / f'last-result-{mode}.html'}"
         )

@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import re
 import sys
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QThread, Signal, Qt, QPoint, QSettings, QTimer
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtGui import QMouseEvent, QCloseEvent
+from PySide6.QtGui import QMouseEvent, QCloseEvent, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -23,6 +24,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QSizeGrip,
     QSizePolicy,
+    QSystemTrayIcon,
 )
 
 from examcon import fetch_exam_routine
@@ -33,7 +35,7 @@ from storage import save_routine, load_routine, clear_routine
 APP_QSS = """
 QWidget {
     color: #eef2f7;
-    font-family: Ubuntu, Inter, Sans-Serif;
+    font-family: "Segoe UI", Arial, Sans-Serif;
     font-size: 14px;
 }
 QWidget#appWindow, QWidget#resultsWidget, QScrollArea {
@@ -1193,12 +1195,12 @@ class MainWindow(QWidget):
 INSTANCE_SERVER_NAME = "uiu-exam-widget-single-instance"
 
 
-def _notify_existing_instance() -> bool:
-    """Return True if another instance exists and was asked to show itself."""
+def _notify_existing_instance(command: bytes = b"show\n") -> bool:
+    """Return True if another instance exists and accepted the command."""
     socket = QLocalSocket()
     socket.connectToServer(INSTANCE_SERVER_NAME)
-    if socket.waitForConnected(250):
-        socket.write(b"show\n")
+    if socket.waitForConnected(350):
+        socket.write(command)
         socket.flush()
         socket.waitForBytesWritten(250)
         socket.disconnectFromServer()
@@ -1207,36 +1209,69 @@ def _notify_existing_instance() -> bool:
 
 
 def main():
+    tray_mode = "--tray" in sys.argv
+
     app = QApplication(sys.argv)
     app.setApplicationName("UIU Exam Widget")
     app.setStyleSheet(APP_QSS)
+    icon_path = Path(__file__).resolve().parent / "assets" / "uiu-exam-widget.ico"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
 
-    # A panel click may launch the command repeatedly. If the GUI is already open,
-    # tell the existing instance to raise itself instead of creating duplicates.
-    if _notify_existing_instance():
+    # In tray mode, closing the main window should leave the background tray
+    # indicator running. The user exits explicitly from the tray menu.
+    if tray_mode:
+        app.setQuitOnLastWindowClosed(False)
+
+    # A second normal launch asks the existing instance to open the full GUI.
+    # A duplicate startup/tray launch only pings it and exits quietly.
+    command = b"ping\n" if tray_mode else b"show\n"
+    if _notify_existing_instance(command):
         return
 
     QLocalServer.removeServer(INSTANCE_SERVER_NAME)
     instance_server = QLocalServer(app)
     if not instance_server.listen(INSTANCE_SERVER_NAME):
-        # Rare stale-socket fallback. Continue normally rather than blocking the app.
         QLocalServer.removeServer(INSTANCE_SERVER_NAME)
         instance_server.listen(INSTANCE_SERVER_NAME)
 
     window = MainWindow()
 
     def raise_window():
-        while instance_server.hasPendingConnections():
-            client = instance_server.nextPendingConnection()
-            if client is not None:
-                client.disconnectFromServer()
         window.showNormal()
         window.show()
         window.raise_()
         window.activateWindow()
 
-    instance_server.newConnection.connect(raise_window)
-    window.show()
+    def process_instance_commands():
+        while instance_server.hasPendingConnections():
+            client = instance_server.nextPendingConnection()
+            if client is None:
+                continue
+            client.waitForReadyRead(80)
+            command_text = bytes(client.readAll()).decode("utf-8", errors="ignore").strip().lower()
+            if command_text.startswith("show"):
+                raise_window()
+            client.disconnectFromServer()
+
+    instance_server.newConnection.connect(process_instance_commands)
+
+    tray_controller = None
+    if tray_mode and QSystemTrayIcon.isSystemTrayAvailable():
+        from windows_tray import WindowsTrayController
+
+        tray_controller = WindowsTrayController(window, app)
+        tray_controller.request_open.connect(raise_window)
+        tray_controller.request_tiles.connect(window.show_sticky_tiles)
+        tray_controller.request_quit.connect(app.quit)
+        tray_controller.show()
+    else:
+        # Remote Desktop / stripped-down shells can report no system tray.
+        # Fall back to the normal GUI instead of leaving an invisible process.
+        if tray_mode:
+            app.setQuitOnLastWindowClosed(True)
+        window.show()
+
     sys.exit(app.exec())
 
 
