@@ -2,19 +2,6 @@
 
 Windows edition of the UIU ExamCon routine app.
 
-## What it does
-
-- Student / Faculty ExamCon login.
-- Finds only the student's assigned room from ExamCon room ranges.
-- Saves the fetched routine locally until **Clear Saved Routine** is pressed.
-- Never saves the UCAM password.
-- Shows live current-time vs exam start/end countdowns.
-- Keeps the modern dark routine UI and movable/resizable desktop exam tiles.
-- Adds a native Windows **system-tray indicator** beside the clock area.
-- Clicking the tray icon opens or raises the full GUI.
-- Tray icon color becomes warmer as the next exam gets closer.
-- When all saved exams are over, the tray tooltip/menu says **You're good now**.
-- Starts automatically with Windows after installation.
 
 ## Important Windows tray behavior
 
