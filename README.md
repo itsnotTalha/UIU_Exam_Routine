@@ -2,6 +2,8 @@
 
 Ubuntu desktop app for UIU ExamCon routines.
 
+![Sample Screenshot](Screenshot.png)
+
 ## What this version fixes
 
 - Student and Faculty login modes remain separate.
