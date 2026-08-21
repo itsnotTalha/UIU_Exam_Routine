@@ -1,80 +1,59 @@
-# UIU Exam Widget — MVP 1.4
+# UIU Exam Widget — MVP 2.0
 
-Ubuntu desktop app for UIU ExamCon routines.
+This version adds a real GNOME Shell top-bar extension in addition to the main PySide6 GUI.
 
-![Sample Screenshot](Screenshot.png)
+## Top-bar behavior
 
-## What this version fixes
+The indicator is installed in the GNOME **center box at position 0**, which places it immediately to the **left of the center clock** on the standard Ubuntu panel.
 
-- Student and Faculty login modes remain separate.
-- Student mode resolves the **single room assigned to the entered Student ID** from ExamCon room ranges.
-- Routine data is cached locally after a successful fetch and restored on the next launch.
-- Passwords are never stored.
-- **Clear Saved Routine** is the only action that removes the saved routine.
-- Child labels are transparent, removing the black strips/blocks seen in MVP 1.3.
-- Desktop tiles have a safe minimum size so Date / Time / Room cannot overlap or collapse while resizing.
-- Date and room panels stay fixed; the time panel uses the remaining width.
-- Tile geometry is still remembered.
-- Exam timing now uses both the **start and end time**.
-- A live system-local clock is shown in the main window.
-- Time status refreshes every 30 seconds:
-  - `Starts in 1d 22h 56m`
-  - `Starts in 42m`
-  - `IN PROGRESS · 1h 18m left`
-  - `Ended 24m ago`
-  - `Completed`
-- NEXT/LIVE highlighting updates automatically as time passes.
+It shows only one useful status:
 
-## Run
+- Upcoming: `CSE 425 · 1d 22h · R307`
+- Live exam: `CSE 425 · LIVE 1h 18m · R307`
+- All exams finished: `✓ You're good now`
+- No cached routine: `UIU · Fetch routine`
 
-If dependencies are already installed from an earlier version:
+Clicking the indicator opens the full UIU Exam Widget. If the GUI is already running, the existing window is raised instead of opening a duplicate.
+
+## Install the application dependencies
 
 ```bash
-chmod +x run.sh
-./run.sh
-```
-
-For a fresh install:
-
-```bash
-sudo apt update
-sudo apt install -y python3 python3-venv
 chmod +x install.sh run.sh
 ./install.sh
-./run.sh
 ```
 
-## Saved routine
+## Install the GNOME top-bar extension
 
-Routine cache:
+```bash
+chmod +x install-topbar.sh
+./install-topbar.sh
+```
+
+The installer detects the local GNOME Shell major version and writes matching extension metadata.
+
+If GNOME has not discovered the new extension yet, log out and back in once, then run:
+
+```bash
+gnome-extensions enable uiu-exam-indicator@local
+```
+
+## Data flow
+
+The GUI continues to own ExamCon login/fetching. Passwords are never stored.
+
+After a successful fetch it writes:
 
 ```text
 ~/.local/share/uiu-exam-widget/routine-cache.json
+~/.local/share/uiu-exam-widget/panel-cache.json
 ```
 
-The password is not written to this file.
+`panel-cache.json` contains normalized course/start/end/room information only. The GNOME extension reads it locally and recalculates the next exam every 30 seconds. It also watches the cache directory so a refresh in the GUI appears in the panel quickly.
 
-## Tile resize behavior
+Existing cached routines from MVP 1.x are migrated automatically when the GUI opens, so another ExamCon login is normally not required.
 
-Desktop tiles can be enlarged freely, but they cannot be shrunk below the size required for the three important blocks to remain readable. This is intentional: it prevents the text wrapping and panel overlap visible in previous versions.
+## Remove only the top-bar extension
 
-## MVP 1.6.1 visual refresh
-
-- Neutral charcoal/slate cards instead of full-card color washes.
-- Thin urgency indicator on every routine card/tile.
-- Urgency palette intentionally avoids blue-to-red interpolation through purple:
-  - far away: blue
-  - 3–7 days: cool blue
-  - 1–3 days: amber
-  - 6–24 hours: orange
-  - under 6 hours: red
-  - under 1 hour/live: bright red
-- Only important UI parts carry urgency color: countdown, room outline/label, urgency bar.
-- Main text/background remains stable and easy to scan.
-
-
-## MVP 1.6.1 hotfix
-
-- Fixed `Could not parse stylesheet of object StickyExamWindow` on desktop tiles.
-- Urgency theme is now applied to the tile card itself.
-- The thin urgency bar on desktop tiles now receives the same blue/amber/orange/red color as the main routine card.
+```bash
+./uninstall-topbar.sh
+```

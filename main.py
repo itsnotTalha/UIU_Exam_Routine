@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 
 from PySide6.QtCore import QObject, QThread, Signal, Qt, QPoint, QSettings, QTimer
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtGui import QMouseEvent, QCloseEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -1189,12 +1190,52 @@ class MainWindow(QWidget):
         self.hide_sticky_btn.setEnabled(False)
 
 
+INSTANCE_SERVER_NAME = "uiu-exam-widget-single-instance"
+
+
+def _notify_existing_instance() -> bool:
+    """Return True if another instance exists and was asked to show itself."""
+    socket = QLocalSocket()
+    socket.connectToServer(INSTANCE_SERVER_NAME)
+    if socket.waitForConnected(250):
+        socket.write(b"show\n")
+        socket.flush()
+        socket.waitForBytesWritten(250)
+        socket.disconnectFromServer()
+        return True
+    return False
+
+
 def main():
     app = QApplication(sys.argv)
     app.setApplicationName("UIU Exam Widget")
     app.setStyleSheet(APP_QSS)
 
+    # A panel click may launch the command repeatedly. If the GUI is already open,
+    # tell the existing instance to raise itself instead of creating duplicates.
+    if _notify_existing_instance():
+        return
+
+    QLocalServer.removeServer(INSTANCE_SERVER_NAME)
+    instance_server = QLocalServer(app)
+    if not instance_server.listen(INSTANCE_SERVER_NAME):
+        # Rare stale-socket fallback. Continue normally rather than blocking the app.
+        QLocalServer.removeServer(INSTANCE_SERVER_NAME)
+        instance_server.listen(INSTANCE_SERVER_NAME)
+
     window = MainWindow()
+
+    def raise_window():
+        while instance_server.hasPendingConnections():
+            client = instance_server.nextPendingConnection()
+            if client is not None:
+                client.disconnectFromServer()
+        window.showNormal()
+        window.show()
+        window.raise_()
+        window.activateWindow()
+
+    instance_server.newConnection.connect(raise_window)
     window.show()
     sys.exit(app.exec())
 
