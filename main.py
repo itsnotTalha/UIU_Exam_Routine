@@ -123,18 +123,19 @@ QLabel#timeSecondary { color: #b9c3d5; font-size: 14px; font-weight: 700; }
 QLabel#roomLabel { color: #9eaef5; font-size: 10px; font-weight: 800; }
 QLabel#roomValue { color: #ffffff; font-size: 30px; font-weight: 900; }
 QLabel#nextBadge {
-    background: #5570f6;
-    color: #ffffff;
-    border-radius: 8px;
+    background: #182130;
+    color: #dbe7ff;
+    border: 1px solid #31415a;
+    border-radius: 7px;
     padding: 4px 8px;
     font-size: 10px;
     font-weight: 800;
 }
 QLabel#liveBadge {
-    background: #123c32;
-    color: #8df0cb;
-    border: 1px solid #246552;
-    border-radius: 8px;
+    background: #32151b;
+    color: #ff7387;
+    border: 1px solid #a92e42;
+    border-radius: 7px;
     padding: 4px 8px;
     font-size: 10px;
     font-weight: 800;
@@ -199,6 +200,161 @@ class FetchWorker(QObject):
             self.finished.emit(exams)
         except Exception as exc:
             self.failed.emit(str(exc))
+
+
+def _hex_to_rgb(value: str) -> tuple[int, int, int]:
+    value = value.lstrip("#")
+    return int(value[0:2], 16), int(value[2:4], 16), int(value[4:6], 16)
+
+
+def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+    r, g, b = [max(0, min(255, int(v))) for v in rgb]
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def _mix(color_a: str, color_b: str, ratio: float) -> str:
+    ratio = max(0.0, min(1.0, ratio))
+    ar, ag, ab = _hex_to_rgb(color_a)
+    br, bg, bb = _hex_to_rgb(color_b)
+    return _rgb_to_hex((
+        round(ar + (br - ar) * ratio),
+        round(ag + (bg - ag) * ratio),
+        round(ab + (bb - ab) * ratio),
+    ))
+
+
+def _brighten(color: str, amount: float) -> str:
+    return _mix(color, "#ffffff", amount)
+
+
+def _darken(color: str, amount: float) -> str:
+    return _mix(color, "#000000", amount)
+
+
+def urgency_theme(exam: Exam, now: Optional[datetime] = None) -> dict[str, str]:
+    """Neutral modern surfaces with urgency only in accents.
+
+    Far exams stay cool/clean. The accent becomes warmer and brighter as the
+    exam approaches, avoiding full-card pink/purple washes.
+    """
+    now = now or datetime.now()
+    start = exam.start_datetime()
+    _, state = exam_state(exam, now)
+
+    if state == "completed":
+        accent = "#64748b"
+        status = "#94a3b8"
+    elif state == "live":
+        accent = "#ff334d"
+        status = "#ff667a"
+    elif start is None:
+        accent = "#4f7cff"
+        status = "#7ea2ff"
+    else:
+        seconds_until = max(0.0, (start - now).total_seconds())
+
+        # Deliberately avoid blue->red interpolation, which passes through purple.
+        if seconds_until > 7 * 86400:
+            accent, status = "#3b82f6", "#7db0ff"
+        elif seconds_until > 3 * 86400:
+            accent, status = "#4f8cff", "#8bb7ff"
+        elif seconds_until > 24 * 3600:
+            accent, status = "#f59e0b", "#fbbf24"
+        elif seconds_until > 6 * 3600:
+            accent, status = "#f97316", "#fb923c"
+        elif seconds_until > 60 * 60:
+            accent, status = "#ef4444", "#ff6262"
+        else:
+            accent, status = "#ff2d2d", "#ff6b6b"
+
+    return {
+        "accent": accent,
+        "accent_soft": _mix("#101722", accent, 0.16),
+        "accent_softer": _mix("#0f1622", accent, 0.08),
+        "status_fg": status,
+        "card_bg": "#111722",
+        "card_bg_alt": "#0f151f",
+        "card_border": "#253043",
+        "panel_bg": "#0d131d",
+        "panel_border": "#202b3b",
+        "room_bg": "#0d131d",
+        "text": "#f8fafc",
+        "subtext": "#aab6c8",
+        "muted": "#7f8ca3",
+        "section_bg": "#151d2a",
+        "section_border": "#2a3649",
+        "section_fg": "#9eabc0",
+    }
+
+
+def routine_card_styles(main_selector: str, theme: dict[str, str]) -> str:
+    return f"""
+{main_selector} {{
+    background: {theme['card_bg']};
+    border: 1px solid {theme['card_border']};
+    border-radius: 18px;
+}}
+QFrame#datePanel, QFrame#timePanel {{
+    background: {theme['panel_bg']};
+    border: 1px solid {theme['panel_border']};
+    border-radius: 12px;
+}}
+QFrame#roomPanel {{
+    background: {theme['room_bg']};
+    border: 1px solid {theme['accent']};
+    border-radius: 12px;
+}}
+QLabel#courseCode {{
+    color: {theme['text']};
+    background: transparent;
+}}
+QLabel#courseName {{
+    color: {theme['subtext']};
+    background: transparent;
+}}
+QLabel#roomLabel {{
+    color: {theme['status_fg']};
+    background: transparent;
+}}
+QLabel#roomValue {{
+    color: {theme['text']};
+    background: transparent;
+}}
+QLabel#metricCaption, QLabel#dateMonth, QLabel#weekday {{
+    color: {theme['muted']};
+    background: transparent;
+}}
+QLabel#dateDay, QLabel#timeValue, QLabel#timeSecondary {{
+    color: {theme['text']};
+    background: transparent;
+}}
+QLabel#sectionBadge {{
+    background: {theme['section_bg']};
+    color: {theme['section_fg']};
+    border: 1px solid {theme['section_border']};
+    border-radius: 7px;
+    padding: 3px 7px;
+}}
+QLabel#statusUpcoming, QLabel#statusLive {{
+    color: {theme['status_fg']};
+    background: {theme['accent_soft']};
+    border: 1px solid {theme['accent']};
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 800;
+}}
+QLabel#statusCompleted {{
+    color: #8b98ac;
+    background: #151b25;
+    border: 1px solid #263141;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+}}
+"""
+
 
 
 def _duration_text(seconds: float, suffix: str = "") -> str:
@@ -426,6 +582,7 @@ class RoutineCard(QFrame):
         super().__init__()
         self.exam = exam
         self.is_next = is_next
+        self._last_theme_key = None
         _, state = exam_state(exam)
         if state == "live":
             self.setObjectName("liveRoutineCard")
@@ -438,8 +595,13 @@ class RoutineCard(QFrame):
         room = exam.assigned_room(student_id) if mode == "student" else exam.room
 
         root = QHBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(14)
+        root.setContentsMargins(10, 14, 16, 14)
+        root.setSpacing(12)
+
+        self.urgency_bar = QFrame()
+        self.urgency_bar.setFixedWidth(4)
+        self.urgency_bar.setMinimumHeight(92)
+        root.addWidget(self.urgency_bar, 0, Qt.AlignmentFlag.AlignVCenter)
 
         root.addWidget(DatePanel(exam), 0, Qt.AlignmentFlag.AlignVCenter)
 
@@ -487,6 +649,18 @@ class RoutineCard(QFrame):
         root.addWidget(RoomPanel(room), 0, Qt.AlignmentFlag.AlignVCenter)
         self.refresh_time(datetime.now(), is_next)
 
+    def apply_visual_theme(self, now: Optional[datetime] = None):
+        now = now or datetime.now()
+        theme = urgency_theme(self.exam, now)
+        theme_key = (self.objectName(), tuple(sorted(theme.items())))
+        if theme_key == self._last_theme_key:
+            return
+        self.setStyleSheet(routine_card_styles(f"QFrame#{self.objectName()}", theme))
+        self.urgency_bar.setStyleSheet(
+            f"background: {theme['accent']}; border: none; border-radius: 2px;"
+        )
+        self._last_theme_key = theme_key
+
     def refresh_time(self, now: Optional[datetime] = None, is_next: Optional[bool] = None):
         now = now or datetime.now()
         if is_next is not None:
@@ -508,6 +682,7 @@ class RoutineCard(QFrame):
             self.setObjectName("routineCard")
             self.state_badge.hide()
 
+        self.apply_visual_theme(now)
         self.style().unpolish(self)
         self.style().polish(self)
         self.state_badge.style().unpolish(self.state_badge)
@@ -573,6 +748,7 @@ class StickyExamWindow(QWidget):
         super().__init__()
         self.exam = exam
         self.is_next = is_next
+        self._last_theme_key = None
         self.tile_key = re.sub(r"[^A-Za-z0-9_.-]+", "_", f"{exam.course_code}_{exam.date}_{exam.time}")
         self.settings = QSettings("UIU", "UIU Exam Widget")
 
@@ -600,8 +776,12 @@ class StickyExamWindow(QWidget):
         outer.addWidget(self.card)
 
         root = QVBoxLayout(self.card)
-        root.setContentsMargins(15, 12, 12, 10)
-        root.setSpacing(10)
+        root.setContentsMargins(13, 10, 13, 10)
+        root.setSpacing(9)
+
+        self.urgency_bar = QFrame()
+        self.urgency_bar.setFixedHeight(4)
+        root.addWidget(self.urgency_bar)
 
         drag = DragHeader(self)
         drag_layout = QHBoxLayout(drag)
@@ -689,6 +869,23 @@ class StickyExamWindow(QWidget):
 
         self.refresh_time(datetime.now(), is_next)
 
+    def apply_visual_theme(self, now: Optional[datetime] = None):
+        now = now or datetime.now()
+        theme = urgency_theme(self.exam, now)
+        card_name = self.card.objectName()
+        theme_key = (card_name, tuple(sorted(theme.items())))
+        if theme_key == self._last_theme_key:
+            return
+
+        # Apply the QSS to the actual card, not the frameless top-level window.
+        # The previous build generated `QFrame# { ... }` because the top-level
+        # StickyExamWindow has no objectName, which is invalid Qt stylesheet syntax.
+        self.card.setStyleSheet(routine_card_styles(f"QFrame#{card_name}", theme))
+        self.urgency_bar.setStyleSheet(
+            f"background: {theme['accent']}; border: none; border-radius: 2px;"
+        )
+        self._last_theme_key = theme_key
+
     def refresh_time(self, now: Optional[datetime] = None, is_next: Optional[bool] = None):
         now = now or datetime.now()
         if is_next is not None:
@@ -710,6 +907,7 @@ class StickyExamWindow(QWidget):
             self.card.setObjectName("stickyCard")
             self.state_badge.hide()
 
+        self.apply_visual_theme(now)
         self.card.style().unpolish(self.card)
         self.card.style().polish(self.card)
         self.state_badge.style().unpolish(self.state_badge)
@@ -745,7 +943,7 @@ class MainWindow(QWidget):
         title = QLabel("Exam Routine")
         title.setObjectName("pageTitle")
         title_col.addWidget(title)
-        subtitle = QLabel("Course, exact exam time and your room — nothing else.")
+        subtitle = QLabel("Course, time and room — urgency is shown with subtle color accents.")
         subtitle.setObjectName("pageSubtitle")
         title_col.addWidget(subtitle)
         heading.addLayout(title_col)
@@ -981,7 +1179,7 @@ class MainWindow(QWidget):
             self.sticky_windows.append(tile)
 
         self.hide_sticky_btn.setEnabled(bool(self.sticky_windows))
-        self.status.setText("Tiles are movable/resizable; safe minimum sizes prevent text from breaking.")
+        self.status.setText("Tiles are movable/resizable. Urgency is shown with clean accent colors, not full-card tints.")
         self.update_clock_and_statuses()
 
     def hide_sticky_tiles(self):

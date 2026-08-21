@@ -55,3 +55,24 @@ The password is not written to this file.
 ## Tile resize behavior
 
 Desktop tiles can be enlarged freely, but they cannot be shrunk below the size required for the three important blocks to remain readable. This is intentional: it prevents the text wrapping and panel overlap visible in previous versions.
+
+## MVP 1.6.1 visual refresh
+
+- Neutral charcoal/slate cards instead of full-card color washes.
+- Thin urgency indicator on every routine card/tile.
+- Urgency palette intentionally avoids blue-to-red interpolation through purple:
+  - far away: blue
+  - 3–7 days: cool blue
+  - 1–3 days: amber
+  - 6–24 hours: orange
+  - under 6 hours: red
+  - under 1 hour/live: bright red
+- Only important UI parts carry urgency color: countdown, room outline/label, urgency bar.
+- Main text/background remains stable and easy to scan.
+
+
+## MVP 1.6.1 hotfix
+
+- Fixed `Could not parse stylesheet of object StickyExamWindow` on desktop tiles.
+- Urgency theme is now applied to the tile card itself.
+- The thin urgency bar on desktop tiles now receives the same blue/amber/orange/red color as the main routine card.
